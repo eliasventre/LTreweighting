@@ -1,6 +1,6 @@
 # LTreweighting
-This repository allows to reproduce the figures of the paper Ventre et al. [1], which describe a method of trajectory inference for scRNA-seq data with lineage tracing. 
-Note that some of the functions presented here are directly taken from two previously published papers, [2], and [3]: this is of course always specified in the files.
+This repository allows to reproduce the figures of the paper Ventre et al. [1], which describes a method of trajectory inference for scRNA-seq data with lineage tracing. 
+Note that some of the functions in these files, in particular the ones to simulate branching SDEs or to solve a convex minimization problem using Mean-field Langevin dynamics, are directly taken or adapted from two previously published papers, [2], and [3]: this is of course always specified at the head of the files.
 
 [1] Ventre, E., Forrow, A., Gadhiwala, N., Chakraborty, P., Angel, O., & Schiebinger, G. (2023). Trajectory inference for a branching SDE model of cell differentiation. arXiv preprint arXiv:2205.19145.
 
