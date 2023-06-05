@@ -53,7 +53,7 @@ n_mean = 7 # number of repetitions
 p_vec = [1, .8, .6, .3, .15, .05, .01] # sequence of subsampling rates
 N0 = 10 # number of simulated trees at each timepoint
 
-chain = 40 # reverse of entropy regularization of the Wasserstein distance used in the chaining
+chain = 10 # reverse of entropy regularization of the Wasserstein distance used in the chaining
           # in the MFL-like method described in Appendix B2
 
 
