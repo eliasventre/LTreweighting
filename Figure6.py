@@ -19,7 +19,7 @@ from lineageot_files import inference as sim_inf
 from lineageot_files import new as sim_new
 from lineageot_files.new import RMS, subsampled_tree
 
-import models_mfl_method as models_method
+import models_mfl_LOT as models_method
 import models_mfl as models_basic
 
 np.random.seed(2)
@@ -53,7 +53,7 @@ n_mean = 7 # number of repetitions
 p_vec = [1, .8, .6, .3, .15, .05, .01] # sequence of subsampling rates
 N0 = 10 # number of simulated trees at each timepoint
 
-chain = 7 # reverse of entropy regularization of the Wasserstein distance used in the chaining
+chain = 40 # reverse of entropy regularization of the Wasserstein distance used in the chaining
           # in the MFL-like method described in Appendix B2
 
 
