@@ -3,10 +3,10 @@ This repository allows to reproduce the figures of the paper Ventre et al. [1], 
 Note that some of the functions in these files, in particular the ones to simulate branching SDEs and to solve a convex minimization problem using Mean-field Langevin dynamics, are directly taken or adapted from two previously published papers, [2] and [3] respectively. This is of course always specified at the head of the files.
 
 # Requirements
-Dependencies are listed in `conda_requirements.yml`. They can be installed with
+Dependencies are listed in `pip.requirements`. They can be installed with
 
 ```bash
-conda env create -f conda_requirements.yml
+pip install -r pip_requirements.txt
 ```
 
 You should then be able to run the script for the figure you want to reproduce.
