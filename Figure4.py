@@ -313,6 +313,6 @@ for i, flow_type in enumerate(flow_types):
     axes = build_fig(i, axes, flow_type, sample_trees_new[i], proliferation_rates_trees[i],
                      proliferation_rates_true_trees[i], velocity_fields_trees[i], velocity_fields_true_trees[i])
 
-    plt.savefig("Figure4.pdf", dpi=150)
+    plt.savefig("Figures/Figure4.pdf", dpi=150)
     plt.close()
     plt.show()

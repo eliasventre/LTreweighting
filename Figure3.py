@@ -320,5 +320,5 @@ with torch.no_grad():
     cbar.ax.set_title('t')
     ax[0,3].axis('off')
 
-plt.savefig("Figure3.pdf".format(flow_type), dpi=150)
+plt.savefig("Figures/Figure3.pdf".format(flow_type), dpi=150)
 plt.close()

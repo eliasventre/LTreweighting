@@ -369,5 +369,5 @@ fig, axes = plt.subplots(lines, 4, figsize=(20, 5*lines))
 for i in range(0, lines):
     print(i)
     axes[i] = build_fig(axes[i], res[i], i)
-plt.savefig("Figure6.pdf", dpi=150)
+plt.savefig("Figures/Figure6.pdf", dpi=150)
 plt.close()

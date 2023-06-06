@@ -246,5 +246,5 @@ axes[3].plot(np.arange(len(n_ps)+2), [diff_noreweighting for _ in range(len(n_ps
 axes[3].set_title("D", weight="bold")
 
 
-plt.savefig("Figure5.pdf", dpi=150)
+plt.savefig("Figures/Figure5.pdf", dpi=150)
 plt.close()

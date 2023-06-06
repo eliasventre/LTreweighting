@@ -210,4 +210,4 @@ def build_fig(i, axes, flow_type):
 fig, axes = plt.subplots(2, 3, figsize=(15,10))
 for i, flow_type in enumerate(flow_types):
     axes[i, :] = build_fig(i, axes[i, :], flow_type)
-plt.savefig("Figure2.pdf", dpi=150)
+plt.savefig("Figures/Figure2.pdf", dpi=150)
