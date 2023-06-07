@@ -42,7 +42,7 @@ torch.set_num_threads(8)
 dimensions_to_plot = [0, 1]
 
 N_trees = 15
-M = 100
+M = 150
 n_iter = 500
 
 x_init = np.array([0, 0, 0])
@@ -50,7 +50,7 @@ T = np.linspace(.01, 1.1, 7)
 non_constant_branching_rate = True
 mean_division_time = .25*timescale
 
-sim_params = sim.SimulationParameters(division_time_std = .001*timescale,
+sim_params = sim.SimulationParameters(division_time_std = .01*timescale,
                                           flow_type = flow_type,
                                           mutation_rate = 1/timescale,
                                           mean_division_time = mean_division_time,
@@ -71,7 +71,7 @@ def Sinkhorn(mu, nu, K, n=1000):
         f = mu / np.dot(K, g)
         res = np.outer(f, g) * K
         cnt += 1
-    return res, f, g
+    return res
 
 
 def MFL_branching(N0, flow_type, M):
@@ -136,7 +136,7 @@ def MFL_branching(N0, flow_type, M):
                                    sigma_final = 0.5, N = M, temp_init = 1.0, temp_ratio = 1.0,
                                    dim = samples_real.shape[1], tloss = m_with_treestructure, print_interval = 50)
 
-    return rna_arrays, weights_deconvoluted, m_with_treestructure.x
+    return rna_arrays, weights_deconvoluted, m_with_treestructure
 
 
 def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
@@ -149,17 +149,12 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
         # plt.scatter(data2[:, 0], data2[:, 1], color='red')
         # plt.show()
         pairwise_dists = ot.dist(data1, data2)
-        K = np.exp(-pairwise_dists / (2 * tau * (T[tmpt+1] - T[tmpt])))
-        mu, nu = np.ones_like(K[:, 0]) / np.size(K[:, 0]), \
-                 np.ones_like(K[0, :]) / np.size(K[0, :])
-        P, f, g = Sinkhorn(mu, nu, K)
+        K = np.exp(-pairwise_dists / (4 * tau * (T[tmpt+1] - T[tmpt])))
+        mu, nu = np.ones_like(K[:, 0])/np.size(K[:, 0]), np.ones_like(K[0, :])/np.size(K[0, :])
+        P = Sinkhorn(mu, nu, K)
+        P /= np.sum(P, 1)
 
-        vf_res = np.zeros((np.size(P, 0), dim))
-        for i in range(0, np.size(mu)):
-            P[i, :] /= np.sum(P[i, :])
-            for d in range(dim):
-                vf_res[i, d] = np.sum(P[i, :] * data2[:, d]) - data1[i, d]
-        vf.append(vf_res / (T[tmpt+1] - T[tmpt]))
+        vf_res = (np.dot(P, data2) - data1) / (T[tmpt+1] - T[tmpt])
 
         M1 = cdist(rna_arrays[tmpt], data1, 'sqeuclidean')
         M2 = cdist(rna_arrays[tmpt+1], data2, 'sqeuclidean')
@@ -168,7 +163,7 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
         pi2 = ot.emd(weights_deconvoluted[tmpt+1], nu, M2)
         tmp1 = 1/(N_trees*weights_deconvoluted[tmpt])
         tmp2 = 1/(N_trees*weights_deconvoluted[tmpt+1])
-        p= 1/2 # balance between the average of the 2^m and 2^(average of m)
+        p = 1/2 # balance between the average of the 2^m and 2^(average of m)
         for i in range(np.size(mu)):
             mu[i] = np.sum(tmp1 * pi1[:, i] / np.sum(pi1[:, i]))*p
             mu[i] += np.exp2(np.sum(np.log2(tmp1) * pi1[:, i] / np.sum(pi1[:, i])))*(1-p)
@@ -176,12 +171,16 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
             nu[j] = np.sum(tmp2 * pi2[:, j] / np.sum(pi2[:, j]))*p
             nu[j] += np.exp2(np.sum(np.log2(tmp2) * pi2[:, j] / np.sum(pi2[:, j])))*(1-p)
 
-        res = np.log(np.sum(P * np.outer(1/mu, nu), 1)) / (T[tmpt+1] - T[tmpt])
+        pr_res = np.log(np.dot(P, nu)/mu) / (T[tmpt+1] - T[tmpt])
+
+        #Regularization of the outuputs
         M_reg = ot.dist(data1, data1)
         Ker = np.exp(-M_reg/tau)
         Ker /= np.sum(Ker, 1)
-        res = np.dot(Ker, res)
-        pr.append(res)
+        pr_res = np.dot(Ker, pr_res)
+        vf_res = np.dot(Ker, vf_res)
+        vf.append(vf_res)
+        pr.append(pr_res)
 
     return vf, pr
 
@@ -216,15 +215,18 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     axes[1].set_title("B", weight="bold")
     axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
     axes[1].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
-    # axes[1].scatter(velocity_tree_true[:, dimensions_to_plot[1]], velocity_tree[:, dimensions_to_plot[1]], marker='x')
-    # min_tmp = np.min(velocity_tree_true[:, dimensions_to_plot[1]])-.2
-    # max_tmp = np.max(velocity_tree_true[:, dimensions_to_plot[1]])+.2
+
+    # axes[1].scatter(velocity_tree[:, dimensions_to_plot[1]], velocity_tree_true[:, dimensions_to_plot[1]], marker='x')
+    # min_tmp = -8
+    # max_tmp = 8
+    # axes[1].set_xlim(min_tmp, max_tmp)
+    # axes[1].set_ylim(min_tmp, max_tmp)
     # axes[1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
 
     axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
-                    velocity_tree[:, dimensions_to_plot[0]],velocity_tree[:, dimensions_to_plot[1]])
+                    velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red", alpha=.5)
     axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
-                    velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red")
+                    velocity_tree[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[1]], alpha =.5)
 
     N = 100
     y = np.linspace(-1.3, .6, N)
@@ -235,17 +237,17 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
             z[k,l] = 1/sim.func_mean_division_time(np.array([xx, yy, 0]).reshape(1, 3), sim_params)[0]
 
     axes[2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    # We filter the highest and smallest values
-    birth_tree *= np.max(z)/np.quantile(birth_tree, 1)
-    bmax = np.max(birth_tree)
+    # We renormalize the birth rates
+    bmax = np.quantile(birth_tree, .8)
     bmin = 0
 
     mmin, mmax = bmin, bmax
-    levels = ticker.MaxNLocator(nbins=200).tick_values(mmin, mmax)
-    norm = colors.Normalize(vmin=mmin,vmax=mmax)
-    s_inf = axes[2].contourf(x, y, z, levels=levels, norm=norm, alpha=.5, cmap='seismic')
-    axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=.5,
-                    marker='o', edgecolors='black', norm=norm, cmap='seismic', c=birth_tree)
+    levels = ticker.MaxNLocator(nbins=200).tick_values(np.min(z), np.max(z))
+    norm = colors.Normalize(vmin=mmin, vmax=mmax)
+    axes[2].contourf(x, y, z, levels=levels, alpha=.5)
+    s_inf = axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=.5,
+                    marker='o', edgecolors='black',
+                    c = birth_tree * (birth_tree > bmin) * (birth_tree < bmax) + (bmin) * (birth_tree <= bmin) + bmax * (birth_tree >= bmax))
     axes[2].set_title("C", weight="bold")
 
     axes[3].axis('off')
@@ -257,7 +259,7 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
 
 
 samples_real, weights_deconvoluted, m_trees = MFL_branching(N_trees, flow_type, M)
-time_course_datasets_tree = [m.detach().numpy() for m in m_trees]
+time_course_datasets_tree = [m.detach().numpy() for m in m_trees.x]
 vf_tr, pr_tr = build_vf_pr(tau, time_course_datasets_tree, samples_real, weights_deconvoluted)
 
 
