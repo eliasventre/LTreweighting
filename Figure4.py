@@ -8,7 +8,8 @@ os.environ["NUMEXPR_NUM_THREADS"] = num_threads
 
 import copy
 import matplotlib.pyplot as plt
-from matplotlib import ticker, cm
+from matplotlib import ticker
+from matplotlib import colors
 from scipy.spatial.distance import cdist
 import numpy as np
 import ot
@@ -28,7 +29,7 @@ np.random.seed(2)
 alpha = .5
 independent = 1
 
-flow_types = ['MFL_2']
+flow_type = 'MFL_2'
 
 # Setting simulation parameters
 timescale = 1
@@ -40,15 +41,25 @@ torch.set_num_threads(8)
 # Choosing which of the three dimensions to show in later plots
 dimensions_to_plot = [0, 1]
 
-n_mean = 1
 N_trees = 15
-M = np.array([100, 200], dtype=int)
+M = 100
 n_iter = 500
 
 x_init = np.array([0, 0, 0])
 T = np.linspace(.01, 1.1, 7)
 non_constant_branching_rate = True
 mean_division_time = .25*timescale
+
+sim_params = sim.SimulationParameters(division_time_std = .001*timescale,
+                                          flow_type = flow_type,
+                                          mutation_rate = 1/timescale,
+                                          mean_division_time = mean_division_time,
+                                          timestep = 0.005*timescale,
+                                          initial_distribution_std = 0.1,
+                                          diffusion_constant = tau,
+                                          division_time_distribution = division_time_distribution,
+                                          non_constant_branching_rate = non_constant_branching_rate
+                                         )
 
 
 def Sinkhorn(mu, nu, K, n=1000):
@@ -64,17 +75,6 @@ def Sinkhorn(mu, nu, K, n=1000):
 
 
 def MFL_branching(N0, flow_type, M):
-
-    sim_params = sim.SimulationParameters(division_time_std = .001*timescale,
-                                          flow_type = flow_type,
-                                          mutation_rate = 1/timescale,
-                                          mean_division_time = mean_division_time,
-                                          timestep = 0.005*timescale,
-                                          initial_distribution_std = 0.1,
-                                          diffusion_constant = tau,
-                                          division_time_distribution = division_time_distribution,
-                                          non_constant_branching_rate = non_constant_branching_rate
-                                         )
 
     sample = []
     initial_cell = []
@@ -112,8 +112,6 @@ def MFL_branching(N0, flow_type, M):
             tmp_array = np.concatenate((tmp_array, sim_inf.extract_ancestor_data_arrays(true_trees[t][n], T[t-1], sim_params)[0]), axis=0)
         previous_rna_array.append(tmp_array)
 
-    num_cells = [rna_arrays[t].shape[0] for t in range(0, len(T))]
-
     # Creating a copy of the true tree
     true_trees_annotated = [[copy.deepcopy(true_trees[t][n]) for n in range(0, N0)] for t in range(0, len(T))]
     for n in range(0, N0):
@@ -132,7 +130,7 @@ def MFL_branching(N0, flow_type, M):
                                            M = M * np.ones_like(T, dtype=int),
                             lamda_reg = torch.tensor(.05*np.ones(len(T))), lamda_cst = 0, sigma_cst = float("Inf"),
                             branching_rate_fn = None,
-                            sinkhorn_iters = 250, device = device, warm_start = True)
+                            sinkhorn_iters = 500, device = device, warm_start = True)
 
     models.optimize(m_with_treestructure, n_iter = n_iter, eta_final = 0.1, tau_final = sim_params.diffusion_constant,
                                    sigma_final = 0.5, N = M, temp_init = 1.0, temp_ratio = 1.0,
@@ -147,19 +145,20 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
     for tmpt in range(0, len(time_course_datasets)-1):
 
         data1, data2 = time_course_datasets[tmpt], time_course_datasets[tmpt+1]
-        pairwise_dists = cdist(data1, data2, 'sqeuclidean')
+        # plt.scatter(data1[:, 0], data1[:, 1])
+        # plt.scatter(data2[:, 0], data2[:, 1], color='red')
+        # plt.show()
+        pairwise_dists = ot.dist(data1, data2)
         K = np.exp(-pairwise_dists / (2 * tau * (T[tmpt+1] - T[tmpt])))
-        mu, nu = np.ones(np.size(pairwise_dists, 0)) / np.size(pairwise_dists, 0), \
-                 np.ones(np.size(pairwise_dists, 1)) / np.size(pairwise_dists, 1)
-        for i in range(0, np.size(mu)):
-            K[i, :] /= np.sum(K[i, :])
+        mu, nu = np.ones_like(K[:, 0]) / np.size(K[:, 0]), \
+                 np.ones_like(K[0, :]) / np.size(K[0, :])
         P, f, g = Sinkhorn(mu, nu, K)
 
-        vf_res = np.ones((np.size(pairwise_dists, 0), dim))
+        vf_res = np.zeros((np.size(P, 0), dim))
         for i in range(0, np.size(mu)):
             P[i, :] /= np.sum(P[i, :])
             for d in range(dim):
-                vf_res[i, d] = np.sum(P[i, :] * (data2 - data1[i])[:, d])
+                vf_res[i, d] = np.sum(P[i, :] * data2[:, d]) - data1[i, d]
         vf.append(vf_res / (T[tmpt+1] - T[tmpt]))
 
         M1 = cdist(rna_arrays[tmpt], data1, 'sqeuclidean')
@@ -169,15 +168,16 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
         pi2 = ot.emd(weights_deconvoluted[tmpt+1], nu, M2)
         tmp1 = 1/(N_trees*weights_deconvoluted[tmpt])
         tmp2 = 1/(N_trees*weights_deconvoluted[tmpt+1])
+        p= 1/2 # balance between the average of the 2^m and 2^(average of m)
         for i in range(np.size(mu)):
-            mu[i] = (np.sum((tmp1) * pi1[:, i]))
-            mu[i] += np.exp2(np.sum(np.log2(tmp1) * pi1[:, i] / np.sum(pi1[:, i]))) * np.sum(pi1[:, i])
+            mu[i] = np.sum(tmp1 * pi1[:, i] / np.sum(pi1[:, i]))*p
+            mu[i] += np.exp2(np.sum(np.log2(tmp1) * pi1[:, i] / np.sum(pi1[:, i])))*(1-p)
         for j in range(np.size(nu)):
-            nu[j] = (np.sum((tmp2) * pi2[:, j]))
-            nu[j] += np.exp2(np.sum(np.log2(tmp2) * pi2[:, j] / np.sum(pi2[:, j]))) * np.sum(pi2[:, j])
+            nu[j] = np.sum(tmp2 * pi2[:, j] / np.sum(pi2[:, j]))*p
+            nu[j] += np.exp2(np.sum(np.log2(tmp2) * pi2[:, j] / np.sum(pi2[:, j])))*(1-p)
 
         res = np.log(np.sum(P * np.outer(1/mu, nu), 1)) / (T[tmpt+1] - T[tmpt])
-        M_reg = cdist(data1, data1, 'sqeuclidean')
+        M_reg = ot.dist(data1, data1)
         Ker = np.exp(-M_reg/tau)
         Ker /= np.sum(Ker, 1)
         res = np.dot(Ker, res)
@@ -185,134 +185,84 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
 
     return vf, pr
 
-def build_true_vf_pr(rna_arrays, flow_type):
-    sim_params = sim.SimulationParameters(flow_type = flow_type, mean_division_time=mean_division_time)
+def build_true_vf(rna_arrays, sim_params):
     vf, pr = [], []
-    dim = rna_arrays[0].shape[1]
     for tmpt in range(0, len(rna_arrays)-1):
         vf_res = np.ones_like(rna_arrays[tmpt])
-        pr_res = np.ones(np.size(vf_res, 0))
         for x in range(np.size(vf_res, 0)):
             vf_res[x, :] = sim.vector_field(rna_arrays[tmpt][x, :], T[tmpt], sim_params)
-            pr_res[x] = 1/sim.func_mean_division_time(rna_arrays[tmpt][x, :].reshape(1, dim), sim_params)[0]
         vf.append(vf_res)
-        pr.append(pr_res)
-    return vf, pr
+    return vf
 
-def build_fig(i, axes, flow_type, rna_arrays_new, pr_tr, pr_ref_tr, vf_tr, vf_ref_tr):
+def build_fig(axes, rna_arrays, pr_tr, vf_tr):
 
-    rms_vf_tree = list()
-    rms_pr_tree = list()
 
-    for tmpt in range(0, len(T)-1):
-
-        rms_vf_tmp = []
-        rms_pr_tmp = []
-        for n in range(n_mean):
-            rms_vf_tmp.append(RMS(vf_ref_tr[n][tmpt], vf_tr[n][tmpt]))
-            rms_pr_tmp.append(RMS(pr_ref_tr[n][tmpt].reshape(len(pr_ref_tr[n][tmpt]), 1),
-                                  pr_tr[n][tmpt].reshape(len(pr_tr[n][tmpt]), 1)))
-        rms_vf_tree.append(np.mean(rms_vf_tmp))
-        rms_pr_tree.append(np.mean(rms_pr_tmp))
+    samples_real, t_idx_real_new = sim_new.build_samples_real(rna_arrays[:-1])
+    velocity_tree, t_idx_real = sim_new.build_samples_real(vf_tr)
+    vf_ref_tr = build_true_vf(time_course_datasets_tree, sim_params)
+    velocity_tree_true, t_idx_real_true = sim_new.build_samples_real(vf_ref_tr)
+    birth_tree, t_idx_real = sim_new.build_samples_real(pr_tr)
 
     axes[0].set_title("A", weight="bold")
-    axes[0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    if not i: axes[0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
-    samples_real_new, t_idx_real_new = sim_new.build_samples_real(rna_arrays_new[0][:-1])
-    velocity_tree, t_idx_real = sim_new.build_samples_real(vf_tr[0])
-    velocity_tree_true, t_idx_real_true = sim_new.build_samples_real(vf_ref_tr[0])
-    axes[0].quiver(samples_real_new[:, dimensions_to_plot[0]],samples_real_new[:, dimensions_to_plot[1]],
+    axes[0].set_xlabel('true velocity gene ' + str(dimensions_to_plot[0] + 1))
+    axes[0].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[0] + 1))
+    axes[0].scatter(velocity_tree_true[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[0]], marker='x', alpha=.7)
+    min_tmp = -3
+    max_tmp = 3
+    axes[0].plot([min_tmp, max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed')
+    axes[0].set_xlim(min_tmp, max_tmp)
+    axes[0].set_ylim(min_tmp, max_tmp)
+
+    axes[1].set_title("B", weight="bold")
+    axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    axes[1].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+    # axes[1].scatter(velocity_tree_true[:, dimensions_to_plot[1]], velocity_tree[:, dimensions_to_plot[1]], marker='x')
+    # min_tmp = np.min(velocity_tree_true[:, dimensions_to_plot[1]])-.2
+    # max_tmp = np.max(velocity_tree_true[:, dimensions_to_plot[1]])+.2
+    # axes[1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
+
+    axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
                     velocity_tree[:, dimensions_to_plot[0]],velocity_tree[:, dimensions_to_plot[1]])
-    axes[0].quiver(samples_real_new[:, dimensions_to_plot[0]],samples_real_new[:, dimensions_to_plot[1]],
+    axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
                     velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red")
-    axes[0].set_ylim(-1.3, .6)
-    axes[0].set_xlim(-1.7, 1.7)
 
     N = 100
     y = np.linspace(-1.3, .6, N)
     x = np.linspace(-1.7, 1.7, N)
     z = np.outer(x, y)
-    sim_params = sim.SimulationParameters(division_time_std = .001*timescale,
-                                          flow_type = flow_type,
-                                          mutation_rate = 1/timescale,
-                                          mean_division_time = mean_division_time,
-                                          timestep = 0.005*timescale,
-                                          initial_distribution_std = 0.1,
-                                          diffusion_constant = tau,
-                                          division_time_distribution = division_time_distribution,
-                                          non_constant_branching_rate = non_constant_branching_rate
-                                         )
     for k, yy in enumerate(y):
         for l, xx in enumerate(x):
             z[k,l] = 1/sim.func_mean_division_time(np.array([xx, yy, 0]).reshape(1, 3), sim_params)[0]
-    levels = ticker.MaxNLocator(nbins=100).tick_values(np.min(z), np.max(z))
-    axes[1].contourf(x, y, z, levels=levels, alpha=.2)
-    axes[1].set_title("B", weight="bold")
 
-    axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    birth_tree, t_idx_real = sim_new.build_samples_real(pr_tr[0])
-    bmax = np.quantile(birth_tree, .9)
-    bmin = min(0, np.quantile(birth_tree, .1))
-    s_inf2 = axes[1].scatter(samples_real_new[:, dimensions_to_plot[0]],samples_real_new[:, dimensions_to_plot[1]], alpha = .7,
-                    c = birth_tree * (birth_tree > bmin) * (birth_tree < bmax) + (bmin) * (birth_tree <= bmin) + bmax * (birth_tree >= bmax))
+    axes[2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    # We filter the highest and smallest values
+    birth_tree *= np.max(z)/np.quantile(birth_tree, 1)
+    bmax = np.max(birth_tree)
+    bmin = 0
 
-    if not i:
-        axes[2].axis('off')
-        cax = plt.axes([0.66, .11, 0.01, 0.75])
-        cbar = fig.colorbar(s_inf2, ax=axes[2], cax=cax)
-        cbar.ax.set_title('rate')
+    mmin, mmax = bmin, bmax
+    levels = ticker.MaxNLocator(nbins=200).tick_values(mmin, mmax)
+    norm = colors.Normalize(vmin=mmin,vmax=mmax)
+    s_inf = axes[2].contourf(x, y, z, levels=levels, norm=norm, alpha=.5, cmap='seismic')
+    axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=.5,
+                    marker='o', edgecolors='black', norm=norm, cmap='seismic', c=birth_tree)
+    axes[2].set_title("C", weight="bold")
+
+    axes[3].axis('off')
+    cax = plt.axes([0.72, .11, 0.008, 0.75])
+    cbar = fig.colorbar(s_inf, ax=axes[3], cax=cax)
+    cbar.ax.set_title('rate')
 
     return axes
 
 
-res = []
-for i, ft in enumerate(flow_types):
-    res.append([])
-    for _ in range(n_mean):
-        res[i].append(MFL_branching(N_trees, ft, M[i]))
-
-velocity_fields_trees = []
-proliferation_rates_trees = []
-velocity_fields_true_trees = []
-proliferation_rates_true_trees = []
-sample_trees_new = []
-sample_trees_init = []
-
-for f in range(0, len(flow_types)):
-    pr_tr, pr_ref_tr, vf_tr, vf_ref_tr = [],[],[],[]
-    sample_trees_tmp = []
-    sample_real_tmp = []
-
-    for n in range(n_mean):
-
-        samples_real, mult_div, m_trees = res[f][n]
-
-        time_course_datasets_tree = [m.detach().numpy() for m in m_trees]
-        tmp_vel, tmp_prol = build_vf_pr(tau, time_course_datasets_tree, samples_real, mult_div)
-        vf_tr.append(tmp_vel)
-        pr_tr.append(tmp_prol)
-
-        tmp_vel, tmp_prol = build_true_vf_pr(time_course_datasets_tree, flow_types[f])
-        vf_ref_tr.append(tmp_vel)
-        pr_ref_tr.append(tmp_prol)
-
-        sample_trees_tmp.append(time_course_datasets_tree)
-        sample_real_tmp.append(samples_real)
-
-    sample_trees_new.append(sample_trees_tmp)
-    sample_trees_init.append(sample_real_tmp)
-
-    velocity_fields_trees.append(vf_tr)
-    proliferation_rates_trees.append(pr_tr)
-    velocity_fields_true_trees.append(vf_ref_tr)
-    proliferation_rates_true_trees.append(pr_ref_tr)
+samples_real, weights_deconvoluted, m_trees = MFL_branching(N_trees, flow_type, M)
+time_course_datasets_tree = [m.detach().numpy() for m in m_trees]
+vf_tr, pr_tr = build_vf_pr(tau, time_course_datasets_tree, samples_real, weights_deconvoluted)
 
 
-fig, axes = plt.subplots(1, 3, figsize=(15,5))
-for i, flow_type in enumerate(flow_types):
-    axes = build_fig(i, axes, flow_type, sample_trees_new[i], proliferation_rates_trees[i],
-                     proliferation_rates_true_trees[i], velocity_fields_trees[i], velocity_fields_true_trees[i])
-
-    plt.savefig("Figures/Figure4.pdf", dpi=150)
-    plt.close()
-    plt.show()
+fig, axes = plt.subplots(1, 4, figsize=(20,5))
+axes = build_fig(axes, time_course_datasets_tree, pr_tr, vf_tr)
+plt.savefig("Figures/Figure4.pdf", dpi=150)
+plt.close()
+plt.show()
