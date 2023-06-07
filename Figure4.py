@@ -173,7 +173,7 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
 
         pr_res = np.log(np.dot(P, nu)/mu) / (T[tmpt+1] - T[tmpt])
 
-        #Regularization of the outuputs
+        #Regularization of the plot
         M_reg = ot.dist(data1, data1)
         Ker = np.exp(-M_reg/tau)
         Ker /= np.sum(Ker, 1)
