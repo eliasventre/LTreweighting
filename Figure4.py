@@ -42,7 +42,7 @@ torch.set_num_threads(8)
 dimensions_to_plot = [0, 1]
 
 N_trees = 15
-M = 150
+M = 100
 n_iter = 500
 
 x_init = np.array([0, 0, 0])
@@ -159,17 +159,19 @@ def build_vf_pr(tau, time_course_datasets, rna_arrays, weights_deconvoluted):
         M1 = cdist(rna_arrays[tmpt], data1, 'sqeuclidean')
         M2 = cdist(rna_arrays[tmpt+1], data2, 'sqeuclidean')
 
-        pi1 = ot.emd(weights_deconvoluted[tmpt], mu, M1)
-        pi2 = ot.emd(weights_deconvoluted[tmpt+1], nu, M2)
+        pi1 = ot.sinkhorn(weights_deconvoluted[tmpt], mu, M1, reg=1/M)
+        pi1 /= np.sum(pi1, 0)
+        pi2 = ot.sinkhorn(weights_deconvoluted[tmpt+1], nu, M2, reg=1/M)
+        pi2 /= np.sum(pi2, 0)
         tmp1 = 1/(N_trees*weights_deconvoluted[tmpt])
         tmp2 = 1/(N_trees*weights_deconvoluted[tmpt+1])
         p = 1/2 # balance between the average of the 2^m and 2^(average of m)
         for i in range(np.size(mu)):
-            mu[i] = np.sum(tmp1 * pi1[:, i] / np.sum(pi1[:, i]))*p
-            mu[i] += np.exp2(np.sum(np.log2(tmp1) * pi1[:, i] / np.sum(pi1[:, i])))*(1-p)
+            mu[i] = np.sum(tmp1 * pi1[:, i])*p
+            mu[i] += np.exp2(np.sum(np.log2(tmp1) * pi1[:, i]))*(1-p)
         for j in range(np.size(nu)):
-            nu[j] = np.sum(tmp2 * pi2[:, j] / np.sum(pi2[:, j]))*p
-            nu[j] += np.exp2(np.sum(np.log2(tmp2) * pi2[:, j] / np.sum(pi2[:, j])))*(1-p)
+            nu[j] = np.sum(tmp2 * pi2[:, j])*p
+            nu[j] += np.exp2(np.sum(np.log2(tmp2) * pi2[:, j]))*(1-p)
 
         pr_res = np.log(np.dot(P, nu)/mu) / (T[tmpt+1] - T[tmpt])
 
@@ -224,9 +226,9 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     # axes[1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
 
     axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
-                    velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red", alpha=.5)
+                    velocity_tree[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[1]], alpha =1)
     axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
-                    velocity_tree[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[1]], alpha =.5)
+                    velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red", alpha=.5)
 
     N = 100
     y = np.linspace(-1.3, .6, N)
@@ -238,14 +240,13 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
 
     axes[2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
     # We renormalize the birth rates
-    bmax = np.quantile(birth_tree, .8)
-    bmin = 0
+    # birth_tree *= np.max(z)/np.max(birth_tree)
+    bmax = np.quantile(birth_tree, .9)
+    bmin = np.quantile(birth_tree, .1)
 
-    mmin, mmax = bmin, bmax
-    levels = ticker.MaxNLocator(nbins=200).tick_values(np.min(z), np.max(z))
-    norm = colors.Normalize(vmin=mmin, vmax=mmax)
-    axes[2].contourf(x, y, z, levels=levels, alpha=.5)
-    s_inf = axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=.5,
+    levels = ticker.MaxNLocator(nbins=20).tick_values(np.min(z), np.max(z))
+    s_inf = axes[2].contourf(x, y, z, levels=levels, alpha=1)
+    s_inf2 = axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=1,
                     marker='o', edgecolors='black',
                     c = birth_tree * (birth_tree > bmin) * (birth_tree < bmax) + (bmin) * (birth_tree <= bmin) + bmax * (birth_tree >= bmax))
     axes[2].set_title("C", weight="bold")
