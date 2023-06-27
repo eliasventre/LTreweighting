@@ -22,7 +22,7 @@ pip install -r pip_requirements.txt
 ```
 # Approximate execution time
 
-The approximate time for running the python files on a personal laptop are the following:
+The times expected for running the python files on a personal laptop are the following:
 
 Figure2.py : about 15 minutes
 
