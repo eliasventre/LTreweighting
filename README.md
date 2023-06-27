@@ -24,15 +24,15 @@ pip install -r pip_requirements.txt
 
 The times expected for running the python files on a personal laptop are the following:
 
-Figure2.py : about 15 minutes
+Figure2.py : about 15 minutes,
 
-Figure3.py: about an hour
+Figure3.py: about an hour,
 
-Figure4.py: about a minute
+Figure4.py: about a minute,
 
-Figure5.py: about 20 minutes
+Figure5.py: about 20 minutes,
 
-Figure6.py: about two hours
+Figure6.py: about two hours.
 
 
 You should then be able to run the script for the figure you want to reproduce.
