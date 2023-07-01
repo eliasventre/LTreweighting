@@ -32,7 +32,7 @@ flow_type = 'MFL_2'
 
 # Setting simulation parameters
 timescale = 1
-diffusion_constant, division_time_distribution = .2, "exponential"
+diffusion_constant, division_time_distribution = .15, "exponential"
 device = torch.device("cpu") # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float64)
 torch.set_num_threads(8)
@@ -258,7 +258,8 @@ ax[0, 2].legend()
 ax[0, 2].set_xlabel('number of trees')
 ax[0, 2].set_ylabel('RMS')
 
-samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][0]
+samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][-1]
+
 with torch.no_grad():
     paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
                             get_gamma_fn = lambda i : rownorm(m_branching.loss_reg.ot_losses[i].coupling().cpu()),
@@ -271,46 +272,46 @@ m_null = np.concatenate([m.detach().numpy() for m in m_null.x], 0)
 
 with torch.no_grad():
     ax[0,0].scatter(samples_real[:, dimensions_to_plot[0]], samples_real[:, dimensions_to_plot[1]],
-                c= t_idx_real, alpha = 0.25)
+                c= t_idx_real, alpha = 0.5)
     ax[0,0].set_title("A", weight='bold')
     ax[0,0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
     ax[0,0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
-    if flow_type == 'MFL':
+    if flow_type == 'MFL_2':
         ax[0,0].set_xlim(-2, 2)
-        ax[0,0].set_ylim(-1.7, .5)
+        ax[0,0].set_ylim(-1.25, .4)
 
-    if flow_type == 'MFL':
+    if flow_type == 'MFL_2':
         ax[1,0].set_xlim(-2, 2)
-        ax[1,0].set_ylim(-1.7, .5)
+        ax[1,0].set_ylim(-1.25, .4)
     s = ax[1,0].scatter(m_null[:, dimensions_to_plot[0]],
                 m_null[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.25)
+                c = t_idx_mfl, alpha = 0.5)
     ax[1,0].set_title("D", weight='bold')
     ax[1,0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
 
     ax[1,1].scatter(m_branching[:, dimensions_to_plot[0]], m_branching[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.25)
+                c = t_idx_mfl, alpha = 0.5)
     ax[1,1].set_title("E", weight='bold')
-    if flow_type == 'MFL':
+    if flow_type == 'MFL_2':
         ax[1,1].set_xlim(-2, 2)
-        ax[1,1].set_ylim(-1.7, .5)
+        ax[1,1].set_ylim(-1.25, .4)
     ax[1,1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
 
-    if flow_type == 'MFL':
+    if flow_type == 'MFL_2':
         ax[1,2].set_xlim(-2, 2)
-        ax[1,2].set_ylim(-1.7, .5)
+        ax[1,2].set_ylim(-1.25, .4)
     s = ax[1,2].scatter(m_trees[:, dimensions_to_plot[0]],
                 m_trees[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.25)
+                c = t_idx_mfl, alpha = 0.5)
     ax[1,2].set_title("F", weight='bold')
     ax[1,2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
 
-    if flow_type == 'MFL':
+    if flow_type == 'MFL_2':
         ax[0,1].set_xlim(-2, 2)
-        ax[0,1].set_ylim(-1.7, .5)
+        ax[0,1].set_ylim(-1.25, .4)
     ax[0,1].scatter(groundtruth[:, dimensions_to_plot[0]],
                 groundtruth[:, dimensions_to_plot[1]],
-                c = np.kron(np.arange(len(T)), np.ones(factor_gt*M)), alpha = 0.25)
+                c = np.kron(np.arange(len(T)), np.ones(factor_gt*M)), alpha = 0.5)
     ax[0,1].set_title("B", weight='bold')
     ax[0,1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
 

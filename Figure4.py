@@ -29,7 +29,7 @@ np.random.seed(2)
 alpha = .5
 independent = 1
 
-flow_type = 'MFL_2'
+flow_type = 'MFL_2_F4'
 
 # Setting simulation parameters
 timescale = 1
@@ -204,56 +204,59 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     velocity_tree_true, t_idx_real_true = sim_new.build_samples_real(vf_ref_tr)
     birth_tree, t_idx_real = sim_new.build_samples_real(pr_tr)
 
-    axes[0].set_title("A", weight="bold")
-    axes[0].set_xlabel('true velocity gene ' + str(dimensions_to_plot[0] + 1))
-    axes[0].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[0] + 1))
-    axes[0].scatter(velocity_tree_true[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[0]], marker='x', alpha=.7)
+    axes[0, 0].set_title("A", weight="bold")
+    axes[0, 0].set_xlabel('true velocity gene ' + str(dimensions_to_plot[0] + 1))
+    axes[0, 0].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[0] + 1))
+    axes[0, 0].scatter(velocity_tree_true[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[0]], marker='x', alpha=.7)
     min_tmp = -3
     max_tmp = 3
-    axes[0].plot([min_tmp, max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed')
-    axes[0].set_xlim(min_tmp, max_tmp)
-    axes[0].set_ylim(min_tmp, max_tmp)
+    axes[0, 0].plot([min_tmp, max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed')
+    axes[0, 0].set_xlim(min_tmp, max_tmp)
+    axes[0, 0].set_ylim(min_tmp, max_tmp)
+    
+    axes[0, 1].set_title("B", weight="bold")
+    axes[0, 1].set_xlabel('true velocity gene ' + str(dimensions_to_plot[1] + 1))
+    axes[0, 1].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[1] + 1))
+    axes[0, 1].scatter(velocity_tree_true[:, dimensions_to_plot[1]], velocity_tree[:, dimensions_to_plot[1]], marker='x')
+    min_tmp = -1.5
+    max_tmp = 0.4
+    axes[0, 1].set_xlim(min_tmp, max_tmp)
+    axes[0, 1].set_ylim(min_tmp, max_tmp)
+    axes[0, 1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
 
-    axes[1].set_title("B", weight="bold")
-    axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    axes[1].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
-
-    # axes[1].scatter(velocity_tree[:, dimensions_to_plot[1]], velocity_tree_true[:, dimensions_to_plot[1]], marker='x')
-    # min_tmp = -8
-    # max_tmp = 8
-    # axes[1].set_xlim(min_tmp, max_tmp)
-    # axes[1].set_ylim(min_tmp, max_tmp)
-    # axes[1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
-
-    axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
+    axes[1, 0].set_title("C", weight="bold")
+    axes[1, 0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    axes[1, 0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+    axes[1, 0].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
                     velocity_tree[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[1]], alpha =1)
-    axes[1].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
+    axes[1, 0].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
                     velocity_tree_true[:, dimensions_to_plot[0]],velocity_tree_true[:, dimensions_to_plot[1]], color="red", alpha=.5)
+    axes[1, 0].set_xlim(-2, 2)
+    axes[1, 0].set_ylim(-1, .4)
 
     N = 100
-    y = np.linspace(-1.3, .6, N)
-    x = np.linspace(-1.7, 1.7, N)
+    y = np.linspace(-1, .4, N)
+    x = np.linspace(-2, 2, N)
     z = np.outer(x, y)
     for k, yy in enumerate(y):
         for l, xx in enumerate(x):
             z[k,l] = 1/sim.func_mean_division_time(np.array([xx, yy, 0]).reshape(1, 3), sim_params)[0]
 
-    axes[2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    # We renormalize the birth rates
-    # birth_tree *= np.max(z)/np.max(birth_tree)
+    axes[1, 1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
     bmax = np.quantile(birth_tree, .9)
     bmin = np.quantile(birth_tree, .1)
 
     levels = ticker.MaxNLocator(nbins=20).tick_values(np.min(z), np.max(z))
-    s_inf = axes[2].contourf(x, y, z, levels=levels, alpha=1)
-    s_inf2 = axes[2].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=1,
+    s_inf = axes[1, 1].contourf(x, y, z, levels=levels, alpha=1)
+    s_inf2 = axes[1, 1].scatter(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]], alpha=1,
                     marker='o', edgecolors='black',
                     c = birth_tree * (birth_tree > bmin) * (birth_tree < bmax) + (bmin) * (birth_tree <= bmin) + bmax * (birth_tree >= bmax))
-    axes[2].set_title("C", weight="bold")
+    axes[1, 1].set_title("D", weight="bold")
 
-    axes[3].axis('off')
-    cax = plt.axes([0.72, .11, 0.008, 0.75])
-    cbar = fig.colorbar(s_inf, ax=axes[3], cax=cax)
+    axes[0, 2].axis('off')
+    axes[1, 2].axis('off')
+    cax = plt.axes([0.65, .11, 0.01, 0.34])
+    cbar = fig.colorbar(s_inf, ax=axes[1, 2], cax=cax)
     cbar.ax.set_title('rate')
 
     return axes
@@ -264,7 +267,7 @@ time_course_datasets_tree = [m.detach().numpy() for m in m_trees.x]
 vf_tr, pr_tr = build_vf_pr(tau, time_course_datasets_tree, samples_real, weights_deconvoluted)
 
 
-fig, axes = plt.subplots(1, 4, figsize=(20,5))
+fig, axes = plt.subplots(2, 3, figsize=(15,10))
 axes = build_fig(axes, time_course_datasets_tree, pr_tr, vf_tr)
 plt.savefig("Figures/Figure4.pdf", dpi=150)
 plt.close()

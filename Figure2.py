@@ -17,7 +17,7 @@ np.random.seed(2)
 
 # Setting simulation parameters
 timescale = 1
-diffusion_constant, division_time_distribution = [.2, .8], "exponential"
+diffusion_constant, division_time_distribution = [.15, .8], "exponential"
 
 # Choosing which of the three dimensions to show in later plots
 dimensions_to_plot = [0, 1]
@@ -25,7 +25,7 @@ dimensions_to_plot = [0, 1]
 N0 = 2500 # number of trees/cells to simulate
 N_list = [1, 2, 4, 7, 10, 15, 20, 25]
 n_mean = np.ones(len(N_list))
-T = [1.5] # time of simulation
+T = [[1.1], [1.5]] # time of simulation
 
 def RMS(mu, nu, mu_weight, nu_weight, bool):
     """Function measuring the energy distance between two empirical distributions """
@@ -56,7 +56,7 @@ def simulate_SDE(N0, T, flow_type, i):
     # Simulating a set of samples
     sample = []
     initial_cell = []
-    for cnt, t in enumerate(T):
+    for cnt, t in enumerate(T[i]):
         tmp = []
         tmp_initial_cell = []
         for n in range(0, N0):
@@ -67,17 +67,17 @@ def simulate_SDE(N0, T, flow_type, i):
         initial_cell.append(tmp_initial_cell)
 
     # Extracting trees and barcode matrices
-    true_trees = [[] for _ in range(0, len(T))]
-    for t in range(0, len(T)):
+    true_trees = [[] for _ in range(0, len(T[i]))]
+    for t in range(0, len(T[i])):
         for n in range(0, N0):
             true_trees[t].append(sim_inf.list_tree_to_digraph(sample[t][n]))
     # Computing array of cells
-    data_arrays = [[] for _ in range(0, len(T))]
-    for t in range(0, len(T)):
+    data_arrays = [[] for _ in range(0, len(T[i]))]
+    for t in range(0, len(T[i])):
         for n in range(0, N0):
             data_arrays[t].append(sim_inf.extract_data_arrays(true_trees[t][n]))
     rna_arrays = []
-    for t in range(0, len(T)):
+    for t in range(0, len(T[i])):
         tmp_array = data_arrays[t][0][0]
         for n in range(1, N0):
             tmp_array = np.concatenate((tmp_array, data_arrays[t][n][0]), axis=0)
@@ -91,7 +91,7 @@ def simulate_trees(N0, T, flow_type, i):
      and branching rates associated to the same flow_type """
     non_constant_branching_rate = True # False if the branching rate is constant
     non_constant_death_rate = False # False if the branching rate is constant
-    mean_division_time = .4 # 1 / birth rate
+    mean_division_time = .4 * i + .3 * (1 - i) # 1 / birth rate
     mean_death_time = 1e9 # no death
     sim_params = sim.SimulationParameters(division_time_std = .01*timescale,
                                         flow_type = flow_type,
@@ -108,7 +108,7 @@ def simulate_trees(N0, T, flow_type, i):
     # Simulating a set of samples
     sample = []
     initial_cell = []
-    for cnt, t in enumerate(T):
+    for cnt, t in enumerate(T[i]):
         tmp = []
         tmp_initial_cell = []
         for n in range(0, N0):
@@ -119,17 +119,17 @@ def simulate_trees(N0, T, flow_type, i):
         initial_cell.append(tmp_initial_cell)
 
     # Extracting trees and barcode matrices
-    true_trees = [[] for t in range(0, len(T))]
-    for t in range(0, len(T)):
+    true_trees = [[] for t in range(0, len(T[i]))]
+    for t in range(0, len(T[i])):
         for n in range(0, N0):
             true_trees[t].append(sim_inf.list_tree_to_digraph(sample[t][n]))
     # Computing array of cells
-    data_arrays = [[] for t in range(0, len(T))]
-    for t in range(0, len(T)):
+    data_arrays = [[] for t in range(0, len(T[i]))]
+    for t in range(0, len(T[i])):
         for n in range(0, N0):
             data_arrays[t].append(sim_inf.extract_data_arrays(true_trees[t][n]))
     rna_arrays = []
-    for t in range(0, len(T)):
+    for t in range(0, len(T[i])):
         tmp_array = data_arrays[t][0][0]
         for n in range(1, N0):
             tmp_array = np.concatenate((tmp_array, data_arrays[t][n][0]), axis=0)
@@ -137,9 +137,9 @@ def simulate_trees(N0, T, flow_type, i):
 
     # Extract weights
 
-    true_trees_annotated = [[copy.deepcopy(true_trees[t][n]) for n in range(0, N0)] for t in range(0, len(T))]
+    true_trees_annotated = [[copy.deepcopy(true_trees[t][n]) for n in range(0, N0)] for t in range(0, len(T[i]))]
     for n in range(0, N0):
-        for t in range(0, len(T)):
+        for t in range(0, len(T[i])):
             sim_inf.add_node_times_from_division_times(true_trees_annotated[t][n])
             for tt in range(0, t):
                 sim_inf.add_nodes_at_time(true_trees_annotated[t][n], T[tt])

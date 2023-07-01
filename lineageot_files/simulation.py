@@ -112,17 +112,23 @@ class Cell:
     def __str__(self):
         return 'Cell with x: %s\tBarcode: %s' % ( self.x, self.barcode)
 
+
 def MFL_flow_2(x, t):
     dim = np.size(x)
     x0 = np.array([1.5, ] + [0, ]*(dim - 1))
     x1 = -np.array([1.5, ] + [0, ]*(dim - 1))
-    #below are two different potentials for simulating wells of different depths
-
-    #(1e10*x*(x-x0))[0] * (i == 0 and x[0]>0)+ (x*(x1-x))[0] * (i == 0 and x[0]<=0)
-    #((x - x0) * (x - x1)**2 + (x - x0)**2 * (x - x1))[0] * (i == 0)
     res = np.zeros(dim)
     for i in range(dim):
-        res[i] -=    ((x - x0) * (x - x1)**2 + (x - x0)**2 * (x - x1))[0] * (i == 0)+ 20*(x[1] + t) * (i == 1) + 20*x[i] * (i > 1)
+        res[i] -= ((x - x0) * (x - x1)**2 + (x - x0)**2 * (x - x1))[0] * (i == 0) + 20*(t+x[1]) * (i == 1) + 20*x[2] * (i > 1)
+    return res
+
+def MFL_flow_2_F4(x, t):
+    dim = np.size(x)
+    x0 = np.array([1.5, ] + [0, ]*(dim - 1))
+    x1 = -np.array([1.5, ] + [0, ]*(dim - 1))
+    res = np.zeros(dim)
+    for i in range(dim):
+        res[i] -= ((x - x0) * (x - x1)**2 + (x - x0)**2 * (x - x1))[0] * (i == 0) + 2*(t+x[1]) * (i == 1) + 20*x[2] * (i > 1)
     return res
 
 def MFL_flow_3(x, t):
@@ -152,6 +158,8 @@ def vector_field(x, t, params):
     """
     if params.flow_type == "MFL_2":
         return MFL_flow_2(x, t)
+    if params.flow_type == "MFL_2_F4":
+        return MFL_flow_2_F4(x, t)
     elif params.flow_type == "MFL_3":
         return MFL_flow_3(x, t)
     elif params.flow_type == "MFL_4":
@@ -235,7 +243,7 @@ def evolve_x_fromx0(initial_x, time_init, time, params):
 
 def func_mean_division_time(x, params):
     if params.flow_type == "MFL_2": return params.mean_division_time / ((np.tanh(2*x[:, 0]) + 1)/1.5)
-    if params.flow_type == "MFL_2": return params.mean_division_time / ((np.tanh(2*x[:, 0]) + 1)/1.4)
+    if params.flow_type == "MFL_2_F4": return params.mean_division_time / ((np.tanh(2*x[:, 0]) + 1)/1.5)
     elif params.flow_type == "MFL_3": return params.mean_division_time / ((np.tanh(2*x[:, 0]) + 1)/1.2)
     elif params.flow_type == "MFL_4":
         return params.mean_division_time * (.3*(x[:, 1] > -.5) +
