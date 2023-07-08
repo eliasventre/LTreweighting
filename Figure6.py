@@ -53,7 +53,7 @@ n_mean = 7 # number of repetitions
 p_vec = [1, .8, .6, .3, .15, .05, .01] # sequence of subsampling rates
 N0 = 10 # number of simulated trees at each timepoint
 
-chain = 10 # reverse of entropy regularization of the Wasserstein distance used in the chaining
+chain = 9 # reverse of entropy regularization of the Wasserstein distance used in the chaining
           # in the MFL-like method described in Appendix B2
 
 
@@ -303,11 +303,11 @@ def build_fig(axes, res_list, weight_bool):
 
     for i in range(0, 3):
         axes[i].set_title("{}".format(leg[i]), weight="bold")
-        axes[i].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-        if not i: axes[i].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+        if weight_bool: axes[i].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+        if not i: axes[i].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
         if i < 2: tmp, ttmp = sim_new.build_samples_real(res_list[0][2*i])
         else: tmp, ttmp = sim_new.build_samples_real(res_list[0][4] + [res_list[0][6][-1]])
-        axes[i].scatter(tmp[:, dimensions_to_plot[0]],tmp[:, dimensions_to_plot[1]], c = ttmp, alpha=.5)
+        s = axes[i].scatter(tmp[:, dimensions_to_plot[0]],tmp[:, dimensions_to_plot[1]], c = ttmp, alpha=.5)
         axes[i].set_ylim(-2, 1)
 
     tmp_diff_ref = []
@@ -351,9 +351,17 @@ def build_fig(axes, res_list, weight_bool):
     for patch in test['boxes']: patch.set(facecolor='white')
     axes[3].set_xlim(0.5,3.5)
     axes[3].set_ylim(0.25, 0.75)
-    axes[3].set_ylabel('RMS distance')
-    axes[3].set_xticklabels(['no subsampling','no correction', 'corrected'])
+    axes[3].set_ylabel('RMS', fontsize=12)
+    axes[3].set_xticklabels(['no subsampling   ', '   no correction', 'corrected'], fontsize=12)
     axes[3].set_title("{}".format(leg[-1]), weight="bold")
+
+    if weight_bool:
+        axes[4].axis('off')
+        cax = plt.axes([0.75, .11, 0.006, 0.33])
+        cbar = fig.colorbar(s, ax=axes[4], cax=cax)
+        cbar.ax.set_title('time', fontsize=12)
+    else:
+        axes[4].axis('off')
 
     return axes
 
@@ -365,7 +373,7 @@ for m in range(n_mean):
     res[1].append(tmp[1])
 
 lines = 2
-fig, axes = plt.subplots(lines, 4, figsize=(20, 5*lines))
+fig, axes = plt.subplots(lines, 5, figsize=(25, 5*lines))
 for i in range(0, lines):
     print(i)
     axes[i] = build_fig(axes[i], res[i], i)

@@ -205,19 +205,18 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     birth_tree, t_idx_real = sim_new.build_samples_real(pr_tr)
 
     axes[0, 0].set_title("A", weight="bold")
-    axes[0, 0].set_xlabel('true velocity gene ' + str(dimensions_to_plot[0] + 1))
-    axes[0, 0].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[0] + 1))
-    axes[0, 0].scatter(velocity_tree_true[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[0]], marker='x', alpha=.7)
+    axes[0, 0].set_xlabel('true velocity', fontsize=12)
+    axes[0, 0].set_ylabel('inferred velocity', fontsize=12)
+    axes[0, 0].scatter(velocity_tree_true[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[0]], marker='x', alpha=.5)
     min_tmp = -3
     max_tmp = 3
-    axes[0, 0].plot([min_tmp, max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed')
+    axes[0, 0].plot([min_tmp, max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
     axes[0, 0].set_xlim(min_tmp, max_tmp)
     axes[0, 0].set_ylim(min_tmp, max_tmp)
     
     axes[0, 1].set_title("B", weight="bold")
-    axes[0, 1].set_xlabel('true velocity gene ' + str(dimensions_to_plot[1] + 1))
-    axes[0, 1].set_ylabel('inferred velocity gene ' + str(dimensions_to_plot[1] + 1))
-    axes[0, 1].scatter(velocity_tree_true[:, dimensions_to_plot[1]], velocity_tree[:, dimensions_to_plot[1]], marker='x')
+    axes[0, 1].set_xlabel('true velocity', fontsize=12)
+    axes[0, 1].scatter(velocity_tree_true[:, dimensions_to_plot[1]], velocity_tree[:, dimensions_to_plot[1]], marker='x', alpha=.5)
     min_tmp = -1.5
     max_tmp = 0.4
     axes[0, 1].set_xlim(min_tmp, max_tmp)
@@ -225,8 +224,8 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     axes[0, 1].plot([min_tmp,max_tmp], [min_tmp,max_tmp], c='grey', linestyle='dashed', alpha=.5)
 
     axes[1, 0].set_title("C", weight="bold")
-    axes[1, 0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    axes[1, 0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+    axes[1, 0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+    axes[1, 0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
     axes[1, 0].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
                     velocity_tree[:, dimensions_to_plot[0]], velocity_tree[:, dimensions_to_plot[1]], alpha =1)
     axes[1, 0].quiver(samples_real[:, dimensions_to_plot[0]],samples_real[:, dimensions_to_plot[1]],
@@ -242,7 +241,7 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
         for l, xx in enumerate(x):
             z[k,l] = 1/sim.func_mean_division_time(np.array([xx, yy, 0]).reshape(1, 3), sim_params)[0]
 
-    axes[1, 1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    axes[1, 1].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
     bmax = np.quantile(birth_tree, .9)
     bmin = np.quantile(birth_tree, .1)
 
@@ -257,7 +256,7 @@ def build_fig(axes, rna_arrays, pr_tr, vf_tr):
     axes[1, 2].axis('off')
     cax = plt.axes([0.65, .11, 0.01, 0.34])
     cbar = fig.colorbar(s_inf, ax=axes[1, 2], cax=cax)
-    cbar.ax.set_title('rate')
+    cbar.ax.set_title('rate', fontsize=12)
 
     return axes
 

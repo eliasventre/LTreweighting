@@ -194,25 +194,26 @@ for m in range(n_mean):
 ground_truth = simulate_groundtruth(2500, T, flow_type)
 
 lines = 1
-col = 4
+col = 5
 fig, axes = plt.subplots(lines, col, figsize=(5*col, 5*lines))
 
 x_obs, t_obs = sim_new.build_samples_real(ground_truth)
 axes[2].set_title("C", weight="bold")
 axes[2].scatter(x_obs[:, dimensions_to_plot[0]],x_obs[:, dimensions_to_plot[1]], c = t_obs, alpha=.5)
 axes[2].set_ylim(-2, 1)
+axes[2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
 rna = [sim_new.build_samples_real(res[-1][-2][0]),
        sim_new.build_samples_real(res[-1][-2][2])]
 
 axes[0].set_title("A", weight="bold")
-axes[0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-axes[0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
-axes[0].scatter(rna[0][0][:, dimensions_to_plot[0]],rna[0][0][:, dimensions_to_plot[1]], c = rna[0][1], alpha=.5)
+axes[0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+axes[0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
+s = axes[0].scatter(rna[0][0][:, dimensions_to_plot[0]],rna[0][0][:, dimensions_to_plot[1]], c = rna[0][1], alpha=.5)
 axes[0].set_ylim(-2, 1)
 
 axes[1].set_title("B", weight="bold")
-axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 axes[1].scatter(rna[1][0][:, dimensions_to_plot[0]],rna[1][0][:, dimensions_to_plot[1]], c = rna[1][1], alpha=.5)
 axes[1].set_ylim(-2, 1)
 
@@ -237,13 +238,18 @@ test = axes[3].boxplot([tmp_diff_with[p] for p in range(0, len(n_ps))],
     patch_artist=True, medianprops=prop, widths=([.2 for _ in range(0, len(n_ps))]))
 for patch in test['boxes']: patch.set(facecolor='white')
 axes[3].set_xlim(0.5, len(n_ps)+.5)
-axes[3].set_ylabel('RMS distance')
-axes[3].set_xlabel('subsampling rate')
+axes[3].set_ylabel('RMS', fontsize=12)
+axes[3].set_xlabel('subsampling rate', fontsize=12)
 list_tmp = ['{}'.format(p) for p in n_ps]
 list_tmp[1] = '0.8'
 axes[3].set_xticklabels(list_tmp)
 axes[3].plot(np.arange(len(n_ps)+2), [diff_noreweighting for _ in range(len(n_ps)+2)], '--', c='grey')
 axes[3].set_title("D", weight="bold")
+
+axes[4].axis('off')
+cax = plt.axes([0.75,.11, 0.006, 0.74])
+cbar = fig.colorbar(s, ax=axes[2], cax=cax)
+cbar.ax.set_title('time', fontsize=12)
 
 
 plt.savefig("Figures/Figure5.pdf", dpi=150)

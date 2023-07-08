@@ -41,8 +41,8 @@ torch.set_num_threads(8)
 dimensions_to_plot = [0, 1]
 
 N_list = np.array([3, 5, 7, 10, 15])
-n_mean = 10 * np.ones(len(N_list), dtype=int)
-factor_gt = 5
+n_mean = [50, 40, 30, 20, 10]
+factor_gt = 5 # factor providing the number of cells for the ground-truth
 M = 100
 n_iter = 500
 
@@ -103,7 +103,7 @@ def simulate_groundtruth(N0, flow_type):
 
 def MFL_branching(N0, flow_type):
     non_constant_branching_rate = True
-    mean_division_time = .3
+    mean_division_time = .25
     sim_params = sim.SimulationParameters(division_time_std = .01*timescale,
                                           flow_type = flow_type,
                                           mutation_rate = 1/timescale,
@@ -221,44 +221,56 @@ for cnt, n in enumerate(N_list):
 
 fig, ax = plt.subplots(2, 4, figsize=(20, 10))
 
-res_rms_null = np.zeros(len(N_list))
-res_rms_br = np.zeros(len(N_list))
-res_rms_tr = np.zeros(len(N_list))
+res_rms_null = [[] for _ in range(len(N_list))]
+res_rms_br = [[] for _ in range(len(N_list))]
+res_rms_tr = [[] for _ in range(len(N_list))]
 
 rownorm = lambda x: x/x.sum(1).reshape(-1, 1)
 
 for cnt, m in enumerate(res):
     for i in range(0, n_mean[cnt]):
+        res_rms_null[cnt].append(0)
+        res_rms_tr[cnt].append(0)
+        res_rms_br[cnt].append(0)
+
         a, b, m_null, m_branching, m_trees = m[i]
-        res_rms_null[cnt] += RMS(np.concatenate([m.detach().numpy()
-                            for m in m_null.x], 0)[:, :], groundtruth[:, :])
-        res_rms_tr[cnt] += RMS(np.concatenate([m.detach().numpy()
-                            for m in m_trees.x], 0)[:, :], groundtruth[:, :])
+        # res_rms_null[cnt][i] += RMS(np.concatenate([m.detach().numpy()
+        #                     for m in m_null.x], 0)[:, :2], groundtruth[:, :2])
+        # res_rms_tr[cnt][i] += RMS(np.concatenate([m.detach().numpy()
+        #                     for m in m_trees.x], 0)[:, :2], groundtruth[:, :2])
+        # with torch.no_grad():
+        #     paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
+        #                     get_gamma_fn = lambda j : rownorm(m_branching.loss_reg.ot_losses[j].coupling().cpu()),
+        #                             num_couplings = len(T)-1)
+        # res_rms_br[cnt][i] += RMS(np.concatenate([paths[:, time, :2]
+        #                     for time in range(0, paths.shape[1])], 0)[:, :], groundtruth[:, :2])
+        for t in range(len(T)):
+            res_rms_null[cnt][i] += RMS(m_null.x[t].detach().numpy()[:, :2],
+                                                        groundtruth[t*factor_gt*M:(t+1)*factor_gt*M, :2])/len(T)
+            res_rms_tr[cnt][i] += RMS(m_trees.x[t].detach().numpy()[:, :2],
+                                                        groundtruth[t*factor_gt*M:(t+1)*factor_gt*M, :2])/len(T)
+            with torch.no_grad():
+                paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
+                                get_gamma_fn = lambda j : rownorm(m_branching.loss_reg.ot_losses[j].coupling().cpu()),
+                                        num_couplings = len(T)-1)
+            res_rms_br[cnt][i] += RMS(paths[:, t, :2], groundtruth[t*factor_gt*M:(t+1)*factor_gt*M, :2])/len(T)
 
-        with torch.no_grad():
-            paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
-                            get_gamma_fn = lambda j : rownorm(m_branching.loss_reg.ot_losses[j].coupling().cpu()),
-                                    num_couplings = len(T)-1)
-        res_rms_br[cnt] += RMS(np.concatenate([paths[:, time, :]
-                            for time in range(0, paths.shape[1])], 0)[:, :], groundtruth[:, :])
+    res_rms_br[cnt][0] = np.median(res_rms_br[cnt])
+    res_rms_tr[cnt][0] = np.median(res_rms_tr[cnt])
+    res_rms_null[cnt][0] = np.median(res_rms_null[cnt])
 
-
-    res_rms_br[cnt] /= n_mean[cnt]
-    res_rms_tr[cnt] /= n_mean[cnt]
-    res_rms_null[cnt] /= n_mean[cnt]
-
-p0, = ax[0, 2].plot(N_list, res_rms_null, c='green', marker='x')
+p0, = ax[0, 2].plot(N_list, [res_rms_null[cnt][0] for cnt in range(len(N_list))], c='orange', linestyle='dashed', marker='x')
 p0.set_label('without correction')
-p1, = ax[0, 2].plot(N_list, res_rms_br, c='red', marker='x')
+p1, = ax[0, 2].plot(N_list, [res_rms_br[cnt][0] for cnt in range(len(N_list))], c='blue', linestyle='dashdot', marker='x')
 p1.set_label('branching rate')
-p2, = ax[0, 2].plot(N_list, res_rms_tr, c='blue', marker='x')
+p2, = ax[0, 2].plot(N_list, [res_rms_tr[cnt][0] for cnt in range(len(N_list))], c='green', marker='x')
 p2.set_label('reweighting')
 ax[0,2].set_title("C", weight='bold')
-ax[0, 2].legend()
-ax[0, 2].set_xlabel('number of trees')
-ax[0, 2].set_ylabel('RMS')
+ax[0, 2].legend(loc='upper right', fontsize=12)
+ax[0, 2].set_xlabel('number of trees', fontsize=12)
+ax[0, 2].set_ylabel('RMS', fontsize=12)
 
-samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][-1]
+samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][8]
 
 with torch.no_grad():
     paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
@@ -274,8 +286,8 @@ with torch.no_grad():
     ax[0,0].scatter(samples_real[:, dimensions_to_plot[0]], samples_real[:, dimensions_to_plot[1]],
                 c= t_idx_real, alpha = 0.5)
     ax[0,0].set_title("A", weight='bold')
-    ax[0,0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    ax[0,0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+    ax[0,0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+    ax[0,0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
     if flow_type == 'MFL_2':
         ax[0,0].set_xlim(-2, 2)
         ax[0,0].set_ylim(-1.25, .4)
@@ -287,7 +299,8 @@ with torch.no_grad():
                 m_null[:, dimensions_to_plot[1]],
                 c = t_idx_mfl, alpha = 0.5)
     ax[1,0].set_title("D", weight='bold')
-    ax[1,0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    ax[1,0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+    ax[1,0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
 
     ax[1,1].scatter(m_branching[:, dimensions_to_plot[0]], m_branching[:, dimensions_to_plot[1]],
                 c = t_idx_mfl, alpha = 0.5)
@@ -295,7 +308,7 @@ with torch.no_grad():
     if flow_type == 'MFL_2':
         ax[1,1].set_xlim(-2, 2)
         ax[1,1].set_ylim(-1.25, .4)
-    ax[1,1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    ax[1,1].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
     if flow_type == 'MFL_2':
         ax[1,2].set_xlim(-2, 2)
@@ -304,7 +317,7 @@ with torch.no_grad():
                 m_trees[:, dimensions_to_plot[1]],
                 c = t_idx_mfl, alpha = 0.5)
     ax[1,2].set_title("F", weight='bold')
-    ax[1,2].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    ax[1,2].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
     if flow_type == 'MFL_2':
         ax[0,1].set_xlim(-2, 2)
@@ -313,12 +326,12 @@ with torch.no_grad():
                 groundtruth[:, dimensions_to_plot[1]],
                 c = np.kron(np.arange(len(T)), np.ones(factor_gt*M)), alpha = 0.5)
     ax[0,1].set_title("B", weight='bold')
-    ax[0,1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    ax[0,1].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
     ax[1,3].axis('off')
-    cax = plt.axes([0.72, .11, 0.01, 0.33])
+    cax = plt.axes([0.71, .11, 0.008, 0.33])
     cbar = fig.colorbar(s, ax=ax[1,3], cax=cax)
-    cbar.ax.set_title('t')
+    cbar.ax.set_title('time', fontsize=12)
     ax[0,3].axis('off')
 
 plt.savefig("Figures/Figure3.pdf".format(flow_type), dpi=150)

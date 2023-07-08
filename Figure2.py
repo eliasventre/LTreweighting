@@ -25,7 +25,7 @@ dimensions_to_plot = [0, 1]
 N0 = 2500 # number of trees/cells to simulate
 N_list = [1, 2, 4, 7, 10, 15, 20, 25]
 n_mean = np.ones(len(N_list))
-T = [[1.1], [1.5]] # time of simulation
+T = [[1.2], [1.4]] # time of simulation
 
 def RMS(mu, nu, mu_weight, nu_weight, bool):
     """Function measuring the energy distance between two empirical distributions """
@@ -179,33 +179,34 @@ def build_fig(i, axes, flow_type):
         N_leaves.append(np.median(N_leaves_tmp))
         print(n, N_leaves)
     
-    p1, = axes[2].plot(N_list, res_rms, c = "green")
+    p1, = axes[2].plot(N_list, res_rms, c = "blue", linestyle='dashdot', marker='x')
     p1.set_label('BrSDE reweighted - SDE ref')
-    p2, = axes[2].plot(N_list, dist_rms, c = 'blue')
+    p2, = axes[2].plot(N_list, dist_rms, c = 'green', marker='x')
     p2.set_label('SDE - SDE ref')
-    p0, = axes[2].plot(N_list, bad_rms, c = 'red')
+    p0, = axes[2].plot(N_list, bad_rms, c = 'orange', linestyle='dashed', marker='x')
     p0.set_label('BrSDE - SDE ref')
-    if i: axes[2].legend()
-    axes[2].set_xlabel('Number of trees')
-    axes[2].set_ylabel('RMS')
+    if i: axes[2].legend(fontsize=12)
+    axes[2].set_xlabel('number of trees', fontsize=12)
+    axes[2].set_ylabel('RMS', fontsize=12)
 
     samples_real, t_idx_real = sim_new.build_samples_real(rna_arrays_ref)
     axes[0].scatter(samples_real[:, dimensions_to_plot[0]], samples_real[:, dimensions_to_plot[1]],
                     c= "black", alpha = 0.25)
-    if not i: axes[0].set_title("Samples SDE ref")
-    axes[0].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
-    axes[0].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1))
+    if not i: axes[0].set_title("Samples SDE ref", fontsize=12)
+    axes[0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
+    axes[0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
     # axes[0].set_xlim(np.min(samples_real[:, dimensions_to_plot[0]])-.1, np.max(samples_real[:, dimensions_to_plot[0]])+.1)
     axes[0].set_ylim(np.min(samples_real[:, dimensions_to_plot[1]])-.1, np.max(samples_real[:, dimensions_to_plot[1]])+.1)
 
     samples_real_tree, t_idx_real = sim_new.build_samples_real(rna_arrays_trees)
     axes[1].scatter(samples_real_tree[:, dimensions_to_plot[0]], samples_real_tree[:, dimensions_to_plot[1]],
                     c= "black", alpha = 0.25)
-    if not i: axes[1].set_title("Samples BrDSDE")
-    axes[1].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1))
+    if not i: axes[1].set_title("Samples BrDSDE", fontsize=12)
+    axes[1].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
     # axes[1].set_xlim(np.min(samples_real[:, dimensions_to_plot[0]])-.1, np.max(samples_real[:, dimensions_to_plot[0]])+.1)
     axes[1].set_ylim(np.min(samples_real[:, dimensions_to_plot[1]])-.1, np.max(samples_real[:, dimensions_to_plot[1]])+.1)
     return axes
+
 
 fig, axes = plt.subplots(2, 3, figsize=(15,10))
 for i, flow_type in enumerate(flow_types):
