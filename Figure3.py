@@ -270,7 +270,7 @@ ax[0, 2].legend(loc='upper right', fontsize=12)
 ax[0, 2].set_xlabel('number of trees', fontsize=12)
 ax[0, 2].set_ylabel('RMS', fontsize=12)
 
-samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][8]
+samples_real, t_idx_real, m_null, m_branching, m_trees = res[int(min(2, len(N_list)-1))][7]
 
 with torch.no_grad():
     paths = bs.sample_paths(None, N = M, coord = True, x_all = [mt.detach().numpy() for mt in m_branching.x],
@@ -284,7 +284,7 @@ m_null = np.concatenate([m.detach().numpy() for m in m_null.x], 0)
 
 with torch.no_grad():
     ax[0,0].scatter(samples_real[:, dimensions_to_plot[0]], samples_real[:, dimensions_to_plot[1]],
-                c= t_idx_real, alpha = 0.5)
+                c= t_idx_real, alpha = 0.3)
     ax[0,0].set_title("A", weight='bold')
     ax[0,0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
     ax[0,0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
@@ -297,13 +297,13 @@ with torch.no_grad():
         ax[1,0].set_ylim(-1.25, .4)
     s = ax[1,0].scatter(m_null[:, dimensions_to_plot[0]],
                 m_null[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.5)
+                c = t_idx_mfl, alpha = 0.3)
     ax[1,0].set_title("D", weight='bold')
     ax[1,0].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
     ax[1,0].set_ylabel('gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
 
     ax[1,1].scatter(m_branching[:, dimensions_to_plot[0]], m_branching[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.5)
+                c = t_idx_mfl, alpha = 0.3)
     ax[1,1].set_title("E", weight='bold')
     if flow_type == 'MFL_2':
         ax[1,1].set_xlim(-2, 2)
@@ -315,7 +315,7 @@ with torch.no_grad():
         ax[1,2].set_ylim(-1.25, .4)
     s = ax[1,2].scatter(m_trees[:, dimensions_to_plot[0]],
                 m_trees[:, dimensions_to_plot[1]],
-                c = t_idx_mfl, alpha = 0.5)
+                c = t_idx_mfl, alpha = 0.3)
     ax[1,2].set_title("F", weight='bold')
     ax[1,2].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
@@ -324,7 +324,7 @@ with torch.no_grad():
         ax[0,1].set_ylim(-1.25, .4)
     ax[0,1].scatter(groundtruth[:, dimensions_to_plot[0]],
                 groundtruth[:, dimensions_to_plot[1]],
-                c = np.kron(np.arange(len(T)), np.ones(factor_gt*M)), alpha = 0.5)
+                c = np.kron(np.arange(len(T)), np.ones(factor_gt*M)), alpha = 0.3)
     ax[0,1].set_title("B", weight='bold')
     ax[0,1].set_xlabel('gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
 
