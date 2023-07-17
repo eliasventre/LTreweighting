@@ -302,9 +302,9 @@ def build_fig(axes, res_list, weight_bool):
         leg = ["E", "F", "G", "H"]
 
     for i in range(0, 3):
-        axes[i].set_title("{}".format(leg[i]), weight="bold")
-        if weight_bool: axes[i].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=12)
-        if not i: axes[i].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1), fontsize=12)
+        axes[i].set_title("{}".format(leg[i]), weight="bold", fontsize=14)
+        if weight_bool: axes[i].set_xlabel('Gene ' + str(dimensions_to_plot[0] + 1), fontsize=14)
+        if not i: axes[i].set_ylabel('Gene ' + str(dimensions_to_plot[1] + 1), fontsize=14)
         if i < 2: tmp, ttmp = sim_new.build_samples_real(res_list[0][2*i])
         else: tmp, ttmp = sim_new.build_samples_real(res_list[0][4] + [res_list[0][6][-1]])
         s = axes[i].scatter(tmp[:, dimensions_to_plot[0]],tmp[:, dimensions_to_plot[1]], c = ttmp, alpha=.5)
@@ -351,15 +351,15 @@ def build_fig(axes, res_list, weight_bool):
     for patch in test['boxes']: patch.set(facecolor='white')
     axes[3].set_xlim(0.5,3.5)
     axes[3].set_ylim(0.25, 0.75)
-    axes[3].set_ylabel('RMS', fontsize=12)
+    axes[3].set_ylabel('RMS', fontsize=14)
     axes[3].set_xticklabels(['no subsampling   ', '   no correction', 'corrected'], fontsize=12)
-    axes[3].set_title("{}".format(leg[-1]), weight="bold")
+    axes[3].set_title("{}".format(leg[-1]), weight="bold", fontsize=14)
 
     if weight_bool:
         axes[4].axis('off')
         cax = plt.axes([0.75, .11, 0.006, 0.33])
         cbar = fig.colorbar(s, ax=axes[4], cax=cax)
-        cbar.ax.set_title('time', fontsize=12)
+        cbar.ax.set_title('time', fontsize=14)
     else:
         axes[4].axis('off')
 
